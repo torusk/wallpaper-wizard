@@ -41,7 +41,7 @@ uv sync
 
 ### 5. 実行
 ```bash
-uv run python wizard_float.py
+rm -f $(python3 -c "import tempfile; print(tempfile.gettempdir() + '/wizard_float.lock')") && uv run python wizard_float.py
 ```
 
 ## ⚙️ 設定
@@ -81,7 +81,7 @@ cat > "$APP_PATH/Contents/Info.plist" << EOF
 </plist>
 EOF
 ```
-（`$USER` を実際のユーザー名に置き換えるか、`/Users/kazuki/...` と直接指定）
+（`$USER` を実際のユーザー名に置き換える）
 
 ## 📄 ライセンス
 
