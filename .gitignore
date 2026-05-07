@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# uv
+.venv/
+uv.lock
+
+# macOS
+.DS_Store
+
+# 壁紙フォルダはリポジトリに含めない（各自で用意）
+wallpapers/
+
+# バックアップ
+*.bak
