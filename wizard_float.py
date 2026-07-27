@@ -74,10 +74,12 @@ def set_wallpaper(path):
 
 def change_wallpaper():
     """次の壁紙に切り替え、必要なら Dock を再起動して即反映"""
-    global current_index
+    global current_index, wallpaper_files
+    wallpaper_files = get_wallpapers()  # 毎回再スキャン: 画像の増減に再起動なしで追従
     if not wallpaper_files:
         print("壁紙ファイルがありません。")
         return
+    current_index %= len(wallpaper_files)
     path = wallpaper_files[current_index]
     success, method = set_wallpaper(path)
     if success:
