@@ -19,7 +19,7 @@ from AppKit import (
     NSImageView, NSImage, NSColor, NSMenu, NSMenuItem,
     NSEvent, NSBackingStoreBuffered, NSFloatingWindowLevel,
     NSTimer, NSRunLoop, NSRunLoopCommonModes,
-    NSScreen,
+    NSScreen, NSStatusBar, NSVariableStatusItemLength, NSWorkspace,
 )
 from Foundation import NSObject, NSMakeRect
 import objc
@@ -226,7 +226,7 @@ class FloatingWindow(NSWindow):
 
 # ── アプリケーションデリゲート ─────────────────────
 class AppDelegate(NSObject):
-    __slots__ = ('window', 'animation_timer', 'base_x', 'base_y', 'start_time', 'overlay')
+    __slots__ = ('window', 'animation_timer', 'base_x', 'base_y', 'start_time', 'overlay', 'status_item')
 
     def applicationDidFinishLaunching_(self, notification):
         self.window = FloatingWindow.alloc().init()
@@ -244,6 +244,32 @@ class AppDelegate(NSObject):
         )
         NSRunLoop.currentRunLoop().addTimer_forMode_(self.animation_timer, NSRunLoopCommonModes)
         self.overlay = None  # 光エフェクト保持用
+        self.setup_status_item()
+
+    def setup_status_item(self):
+        """メニューバーの🧙アイコンとメニューを配置する"""
+        self.status_item = NSStatusBar.systemStatusBar().statusItemWithLength_(NSVariableStatusItemLength)
+        self.status_item.button().setTitle_("🧙")
+        menu = NSMenu.alloc().initWithTitle_("")
+        for title, selector in [
+            ("壁紙を今すぐ切り替える", "changeWallpaper:"),
+            ("壁紙フォルダを開く", "openWallpaperFolder:"),
+        ]:
+            item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(title, selector, "")
+            item.setTarget_(self)
+            menu.addItem_(item)
+        menu.addItem_(NSMenuItem.separatorItem())
+        quit_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("ウィザードを閉じる", "terminate:", "")
+        quit_item.setTarget_(NSApp)
+        menu.addItem_(quit_item)
+        self.status_item.setMenu_(menu)
+
+    def changeWallpaper_(self, sender):
+        change_wallpaper()
+
+    def openWallpaperFolder_(self, sender):
+        os.makedirs(WALLPAPER_DIR, exist_ok=True)
+        NSWorkspace.sharedWorkspace().openFile_(WALLPAPER_DIR)
 
     def animate_(self, timer):
         t = time.monotonic() - self.start_time
