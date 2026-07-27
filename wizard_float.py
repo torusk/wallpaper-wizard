@@ -262,14 +262,31 @@ class AppDelegate(NSObject):
     def applicationShouldTerminateAfterLastWindowClosed_(self, app):
         return False   # 魔法使いは明示的に閉じるまで残す
 
-# ── 多重起動防止 ───────────────────────────────
+# ── 多重起動防止（クラッシュ残りの古いロックは自動で上書き） ─────
 LOCK_FILE = os.path.join(tempfile.gettempdir(), "wizard_float.lock")
-if os.path.exists(LOCK_FILE):
-    print("すでに起動しています。")
-    sys.exit(0)
-with open(LOCK_FILE, "w") as f:
-    f.write(str(os.getpid()))
-atexit.register(lambda: os.remove(LOCK_FILE))
+
+def acquire_lock():
+    try:
+        with open(LOCK_FILE) as f:
+            old_pid = int(f.read().strip())
+        os.kill(old_pid, 0)  # 生存チェック（シグナルは送らない）
+    except (ValueError, OSError):
+        # ロックなし／中身が壊れている／プロセス消滅 → 上書き可
+        old_pid = None
+    if old_pid is not None:
+        print("すでに起動しています。")
+        sys.exit(0)
+    with open(LOCK_FILE, "w") as f:
+        f.write(str(os.getpid()))
+
+def release_lock():
+    try:
+        os.remove(LOCK_FILE)
+    except FileNotFoundError:
+        pass
+
+acquire_lock()
+atexit.register(release_lock)
 
 # ── 起動 ─────────────────────────────────────
 app = NSApplication.sharedApplication()

@@ -41,8 +41,9 @@ uv sync
 
 ### 5. 実行
 ```bash
-rm -f $(python3 -c "import tempfile; print(tempfile.gettempdir() + '/wizard_float.lock')") && uv run python wizard_float.py
+uv run python wizard_float.py
 ```
+（クラッシュ後にロックファイルが残っても自動で上書きされるため、事前の削除は不要です）
 
 ## ⚙️ 設定
 
@@ -54,34 +55,26 @@ FLOAT_AMPLITUDE = 6.0      # 浮遊の上下幅（ピクセル）
 FLOAT_PERIOD = 2.5         # 浮遊の周期（秒）
 ```
 
-## 🖥️ アプリ化（オプション）
+## 🖥️ アプリ化＆オート起動
 
-以下のスクリプトで `/Applications/Wizard.app` を作成し、Dock にアイコンを表示しない常駐アプリにできます。
-
+### .app をビルド（ダブルクリック起動）
 ```bash
-APP_PATH="/Applications/Wizard.app"
-mkdir -p "$APP_PATH/Contents/MacOS"
-cat > "$APP_PATH/Contents/MacOS/Wizard" << 'EOF'
-#!/bin/bash
-cd /Users/$USER/wallpaper-wizard && uv run python wizard_float.py &
-EOF
-chmod +x "$APP_PATH/Contents/MacOS/Wizard"
-cat > "$APP_PATH/Contents/Info.plist" << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>Wizard</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.$USER.wallpaper-wizard</string>
-    <key>LSUIElement</key>
-    <true/>
-</dict>
-</plist>
-EOF
+bash scripts/build_app.sh
 ```
-（`$USER` を実際のユーザー名に置き換える）
+`wizard.png` からアイコンを生成し、`/Applications/Wizard.app` を作成します（Dock には表示されない常駐型）。
+Finder からダブルクリック、または `open -a Wizard` で起動。ログは `~/Library/Logs/Wizard.log` に出力されます。
+
+このアプリはリポジトリのコードをそのまま実行するラッパーです。コードを修正しても再ビルドは不要で、次回起動時から反映されます（`wizard.png` を差し替えた場合はアイコン更新のために再ビルドしてください）。
+
+### ログイン時オート起動
+```bash
+cp scripts/com.torusk.wallpaper-wizard.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.torusk.wallpaper-wizard.plist
+```
+
+### アンインストール
+```bash
+launchctl bootout gui/$(id -u)/com.torusk.wallpaper-wizard; rm -rf ~/Library/LaunchAgents/com.torusk.wallpaper-wizard.plist /Applications/Wizard.app
+```
 
 ## 📄 ライセンス
 
