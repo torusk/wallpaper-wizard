@@ -247,9 +247,14 @@ class AppDelegate(NSObject):
         self.setup_status_item()
 
     def setup_status_item(self):
-        """メニューバーの🧙アイコンとメニューを配置する"""
+        """メニューバーアイコンとメニューを配置する"""
         self.status_item = NSStatusBar.systemStatusBar().statusItemWithLength_(NSVariableStatusItemLength)
-        self.status_item.button().setTitle_("🧙")
+        # SF Symbolのテンプレート画像 → 白黒自動（他のメニューバー項目と統一される）
+        icon = NSImage.imageNamed_("wand.and.stars")
+        if icon is not None:
+            self.status_item.button().setImage_(icon)
+        else:
+            self.status_item.button().setTitle_("🧙")
         menu = NSMenu.alloc().initWithTitle_("")
         for title, selector in [
             ("壁紙を今すぐ切り替える", "changeWallpaper:"),
