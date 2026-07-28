@@ -174,8 +174,9 @@ class ClickableImageView(NSView):
     def rightMouseDown_(self, event):
         menu = NSMenu.alloc().initWithTitle_("")
         item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
-            "ウィザードを閉じる", "terminate:", ""
+            "ウィザードを閉じる", "hideWizard:", ""
         )
+        item.setTarget_(NSApp.delegate())
         menu.addItem_(item)
         NSMenu.popUpContextMenu_withEvent_forView_(menu, event, self)
 
@@ -226,7 +227,7 @@ class FloatingWindow(NSWindow):
 
 # ── アプリケーションデリゲート ─────────────────────
 class AppDelegate(NSObject):
-    __slots__ = ('window', 'animation_timer', 'base_x', 'base_y', 'start_time', 'overlay', 'status_item')
+    __slots__ = ('window', 'animation_timer', 'base_x', 'base_y', 'start_time', 'overlay', 'status_item', 'toggle_item')
 
     def applicationDidFinishLaunching_(self, notification):
         self.window = FloatingWindow.alloc().init()
@@ -250,7 +251,7 @@ class AppDelegate(NSObject):
         """メニューバーアイコンとメニューを配置する"""
         self.status_item = NSStatusBar.systemStatusBar().statusItemWithLength_(NSVariableStatusItemLength)
         # SF Symbolのテンプレート画像 → 白黒自動（他のメニューバー項目と統一される）
-        icon = NSImage.imageNamed_("wand.and.stars")
+        icon = NSImage.imageWithSystemSymbolName_accessibilityDescription_("wand.and.stars", None)
         if icon is not None:
             self.status_item.button().setImage_(icon)
         else:
@@ -264,7 +265,11 @@ class AppDelegate(NSObject):
             item.setTarget_(self)
             menu.addItem_(item)
         menu.addItem_(NSMenuItem.separatorItem())
-        quit_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("ウィザードを閉じる", "terminate:", "")
+        self.toggle_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("ウィザードを隠す", "toggleWizard:", "")
+        self.toggle_item.setTarget_(self)
+        menu.addItem_(self.toggle_item)
+        menu.addItem_(NSMenuItem.separatorItem())
+        quit_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Wizardを終了", "terminate:", "")
         quit_item.setTarget_(NSApp)
         menu.addItem_(quit_item)
         self.status_item.setMenu_(menu)
@@ -275,6 +280,24 @@ class AppDelegate(NSObject):
     def openWallpaperFolder_(self, sender):
         os.makedirs(WALLPAPER_DIR, exist_ok=True)
         NSWorkspace.sharedWorkspace().openFile_(WALLPAPER_DIR)
+
+    def toggleWizard_(self, sender):
+        if self.window.isVisible():
+            self.hide_wizard()
+        else:
+            self.show_wizard()
+
+    def hideWizard_(self, sender):
+        """右クリック「ウィザードを閉じる」: アプリ本体はメニューバーに残る"""
+        self.hide_wizard()
+
+    def hide_wizard(self):
+        self.window.orderOut_(None)
+        self.toggle_item.setTitle_("ウィザードを表示")
+
+    def show_wizard(self):
+        self.window.makeKeyAndOrderFront_(None)
+        self.toggle_item.setTitle_("ウィザードを隠す")
 
     def animate_(self, timer):
         t = time.monotonic() - self.start_time
