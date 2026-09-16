@@ -19,7 +19,7 @@ from AppKit import (
     NSImageView, NSImage, NSColor, NSMenu, NSMenuItem,
     NSEvent, NSBackingStoreBuffered, NSFloatingWindowLevel,
     NSTimer, NSRunLoop, NSRunLoopCommonModes,
-    NSScreen, NSStatusBar, NSVariableStatusItemLength, NSWorkspace,
+    NSScreen,
 )
 from Foundation import NSObject, NSMakeRect
 import objc
@@ -74,12 +74,10 @@ def set_wallpaper(path):
 
 def change_wallpaper():
     """次の壁紙に切り替え、必要なら Dock を再起動して即反映"""
-    global current_index, wallpaper_files
-    wallpaper_files = get_wallpapers()  # 毎回再スキャン: 画像の増減に再起動なしで追従
+    global current_index
     if not wallpaper_files:
         print("壁紙ファイルがありません。")
         return
-    current_index %= len(wallpaper_files)
     path = wallpaper_files[current_index]
     success, method = set_wallpaper(path)
     if success:
@@ -173,28 +171,12 @@ class ClickableImageView(NSView):
 
     def rightMouseDown_(self, event):
         menu = NSMenu.alloc().initWithTitle_("")
-        
-        # 既存メニュー：ウィザードを閉じる
         item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
-            "ウィザードを閉じる", "hideWizard:", ""
+            "ウィザードを閉じる", "terminate:", ""
         )
-        item.setTarget_(NSApp.delegate())
         menu.addItem_(item)
-        
-        # 追加メニュー：Caffeinateトグル
-        delegate = NSApp.delegate()
-        if hasattr(delegate, 'caffeinate_process') and delegate.caffeinate_process is not None:
-            title = "Caffeinateを無効化 (スリープ許可)"
-        else:
-            title = "Caffeinateを有効化 (スリープ防止)"
-            
-        c_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
-            title, "toggleCaffeinate:", ""
-        )
-        c_item.setTarget_(NSApp.delegate())
-        menu.addItem_(c_item)
-        
         NSMenu.popUpContextMenu_withEvent_forView_(menu, event, self)
+
 
 # ── 魔法使いの浮遊ウィンドウ ──────────────────────
 class FloatingWindow(NSWindow):
@@ -239,13 +221,10 @@ class FloatingWindow(NSWindow):
         self.image_view.image = image
         return self
 
+
 # ── アプリケーションデリゲート ─────────────────────
 class AppDelegate(NSObject):
-<<<<<<< HEAD
-    __slots__ = ('window', 'animation_timer', 'base_x', 'base_y', 'start_time', 'overlay', 'status_item', 'toggle_item')
-=======
-    __slots__ = ('window', 'animation_timer', 'base_x', 'base_y', 'start_time', 'overlay', 'status_item', 'toggle_item', 'caffeinate_process')
->>>>>>> 8beca4c (カフェイネート機能追加。更新マニュアル追加)
+    __slots__ = ('window', 'animation_timer', 'base_x', 'base_y', 'start_time', 'overlay')
 
     def applicationDidFinishLaunching_(self, notification):
         self.window = FloatingWindow.alloc().init()
@@ -263,87 +242,6 @@ class AppDelegate(NSObject):
         )
         NSRunLoop.currentRunLoop().addTimer_forMode_(self.animation_timer, NSRunLoopCommonModes)
         self.overlay = None  # 光エフェクト保持用
-<<<<<<< HEAD
-=======
-        self.caffeinate_process = None  # スリープ防止プロセス保持用
->>>>>>> 8beca4c (カフェイネート機能追加。更新マニュアル追加)
-        self.setup_status_item()
-
-    def setup_status_item(self):
-        """メニューバーアイコンとメニューを配置する"""
-        self.status_item = NSStatusBar.systemStatusBar().statusItemWithLength_(NSVariableStatusItemLength)
-        # SF Symbolのテンプレート画像 → 白黒自動（他のメニューバー項目と統一される）
-        icon = NSImage.imageWithSystemSymbolName_accessibilityDescription_("wand.and.stars", None)
-        if icon is not None:
-            self.status_item.button().setImage_(icon)
-        else:
-            self.status_item.button().setTitle_("🧙")
-        menu = NSMenu.alloc().initWithTitle_("")
-        for title, selector in [
-            ("壁紙を今すぐ切り替える", "changeWallpaper:"),
-            ("壁紙フォルダを開く", "openWallpaperFolder:"),
-        ]:
-            item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(title, selector, "")
-            item.setTarget_(self)
-            menu.addItem_(item)
-        menu.addItem_(NSMenuItem.separatorItem())
-        self.toggle_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("ウィザードを隠す", "toggleWizard:", "")
-        self.toggle_item.setTarget_(self)
-        menu.addItem_(self.toggle_item)
-        menu.addItem_(NSMenuItem.separatorItem())
-        quit_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Wizardを終了", "terminate:", "")
-        quit_item.setTarget_(NSApp)
-        menu.addItem_(quit_item)
-        self.status_item.setMenu_(menu)
-
-    def changeWallpaper_(self, sender):
-        change_wallpaper()
-
-    def openWallpaperFolder_(self, sender):
-        os.makedirs(WALLPAPER_DIR, exist_ok=True)
-        NSWorkspace.sharedWorkspace().openFile_(WALLPAPER_DIR)
-
-    def toggleWizard_(self, sender):
-        if self.window.isVisible():
-            self.hide_wizard()
-        else:
-            self.show_wizard()
-
-    def hideWizard_(self, sender):
-        """右クリック「ウィザードを閉じる」: アプリ本体はメニューバーに残る"""
-        self.hide_wizard()
-
-    def hide_wizard(self):
-        self.window.orderOut_(None)
-        self.toggle_item.setTitle_("ウィザードを表示")
-
-    def show_wizard(self):
-        self.window.makeKeyAndOrderFront_(None)
-        self.toggle_item.setTitle_("ウィザードを隠す")
-<<<<<<< HEAD
-=======
-
-    def toggleCaffeinate_(self, sender):
-        """Caffeinate (スリープ防止) の ON/OFF を切り替える"""
-        if self.caffeinate_process is not None:
-            self.caffeinate_process.terminate()
-            self.caffeinate_process = None
-            print("☕️ Caffeinateを無効化しました (スリープを許可)")
-        else:
-            # -i: アイドルスリープ防止, -d: ディスプレイスリープ防止
-            # -w オプションで親プロセス(Pythonアプリ)が終了したら自動でcaffeinateも終了させる
-            self.caffeinate_process = subprocess.Popen(
-                ['caffeinate', '-i', '-d', '-w', str(os.getpid())],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
-            print("☕️ Caffeinateを有効化しました (スリープを防止)")
-
-    def applicationWillTerminate_(self, notification):
-        """アプリ終了時にバックグラウンドの caffeinate プロセスを終了"""
-        if getattr(self, 'caffeinate_process', None):
-            self.caffeinate_process.terminate()
->>>>>>> 8beca4c (カフェイネート機能追加。更新マニュアル追加)
 
     def animate_(self, timer):
         t = time.monotonic() - self.start_time
@@ -364,31 +262,14 @@ class AppDelegate(NSObject):
     def applicationShouldTerminateAfterLastWindowClosed_(self, app):
         return False   # 魔法使いは明示的に閉じるまで残す
 
-# ── 多重起動防止（クラッシュ残りの古いロックは自動で上書き） ─────
+# ── 多重起動防止 ───────────────────────────────
 LOCK_FILE = os.path.join(tempfile.gettempdir(), "wizard_float.lock")
-
-def acquire_lock():
-    try:
-        with open(LOCK_FILE) as f:
-            old_pid = int(f.read().strip())
-        os.kill(old_pid, 0)  # 生存チェック（シグナルは送らない）
-    except (ValueError, OSError):
-        # ロックなし／中身が壊れている／プロセス消滅 → 上書き可
-        old_pid = None
-    if old_pid is not None:
-        print("すでに起動しています。")
-        sys.exit(0)
-    with open(LOCK_FILE, "w") as f:
-        f.write(str(os.getpid()))
-
-def release_lock():
-    try:
-        os.remove(LOCK_FILE)
-    except FileNotFoundError:
-        pass
-
-acquire_lock()
-atexit.register(release_lock)
+if os.path.exists(LOCK_FILE):
+    print("すでに起動しています。")
+    sys.exit(0)
+with open(LOCK_FILE, "w") as f:
+    f.write(str(os.getpid()))
+atexit.register(lambda: os.remove(LOCK_FILE))
 
 # ── 起動 ─────────────────────────────────────
 app = NSApplication.sharedApplication()
