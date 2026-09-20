@@ -241,11 +241,7 @@ class FloatingWindow(NSWindow):
 
 # ── アプリケーションデリゲート ─────────────────────
 class AppDelegate(NSObject):
-<<<<<<< HEAD
-    __slots__ = ('window', 'animation_timer', 'base_x', 'base_y', 'start_time', 'overlay', 'status_item', 'toggle_item')
-=======
     __slots__ = ('window', 'animation_timer', 'base_x', 'base_y', 'start_time', 'overlay', 'status_item', 'toggle_item', 'caffeinate_process')
->>>>>>> 8beca4c (カフェイネート機能追加。更新マニュアル追加)
 
     def applicationDidFinishLaunching_(self, notification):
         self.window = FloatingWindow.alloc().init()
@@ -263,10 +259,7 @@ class AppDelegate(NSObject):
         )
         NSRunLoop.currentRunLoop().addTimer_forMode_(self.animation_timer, NSRunLoopCommonModes)
         self.overlay = None  # 光エフェクト保持用
-<<<<<<< HEAD
-=======
         self.caffeinate_process = None  # スリープ防止プロセス保持用
->>>>>>> 8beca4c (カフェイネート機能追加。更新マニュアル追加)
         self.setup_status_item()
 
     def setup_status_item(self):
@@ -320,8 +313,6 @@ class AppDelegate(NSObject):
     def show_wizard(self):
         self.window.makeKeyAndOrderFront_(None)
         self.toggle_item.setTitle_("ウィザードを隠す")
-<<<<<<< HEAD
-=======
 
     def toggleCaffeinate_(self, sender):
         """Caffeinate (スリープ防止) の ON/OFF を切り替える"""
@@ -343,7 +334,6 @@ class AppDelegate(NSObject):
         """アプリ終了時にバックグラウンドの caffeinate プロセスを終了"""
         if getattr(self, 'caffeinate_process', None):
             self.caffeinate_process.terminate()
->>>>>>> 8beca4c (カフェイネート機能追加。更新マニュアル追加)
 
     def animate_(self, timer):
         t = time.monotonic() - self.start_time
