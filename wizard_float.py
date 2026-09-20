@@ -184,9 +184,9 @@ class ClickableImageView(NSView):
         # 追加メニュー：Caffeinateトグル
         delegate = NSApp.delegate()
         if hasattr(delegate, 'caffeinate_process') and delegate.caffeinate_process is not None:
-            title = "Caffeinateを無効化 (スリープ許可)"
+            title = "Caffeinate終了"
         else:
-            title = "Caffeinateを有効化 (スリープ防止)"
+            title = "Caffeinate開始"
             
         c_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
             title, "toggleCaffeinate:", ""
