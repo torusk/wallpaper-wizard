@@ -183,8 +183,8 @@ class ClickableImageView(NSView):
         
         # 追加メニュー：Caffeinateトグル
         delegate = NSApp.delegate()
-        if hasattr(delegate, 'caffeinate_process') and delegate.caffeinate_process is not None:
-            title = "Caffeinate終了"
+        if delegate and hasattr(delegate, 'caffeinate_title'):
+            title = delegate.caffeinate_title()
         else:
             title = "Caffeinate開始"
             
@@ -283,6 +283,10 @@ class AppDelegate(NSObject):
         self.toggle_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("ウィザードを隠す", "toggleWizard:", "")
         self.toggle_item.setTarget_(self)
         menu.addItem_(self.toggle_item)
+        # Caffeinateトグル（右クリックメニューと同じ文言）
+        self.caffeinate_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(self.caffeinate_title(), "toggleCaffeinate:", "")
+        self.caffeinate_item.setTarget_(self)
+        menu.addItem_(self.caffeinate_item)
         menu.addItem_(NSMenuItem.separatorItem())
         quit_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Wizardを終了", "terminate:", "")
         quit_item.setTarget_(NSApp)
@@ -314,6 +318,12 @@ class AppDelegate(NSObject):
         self.window.makeKeyAndOrderFront_(None)
         self.toggle_item.setTitle_("ウィザードを隠す")
 
+    def caffeinate_title(self):
+        """Caffeinateの状態に応じたメニュー表示文字を返す（右クリック／メニューバー共通）"""
+        if getattr(self, 'caffeinate_process', None) is not None:
+            return "Caffeinate終了"
+        return "Caffeinate開始"
+
     def toggleCaffeinate_(self, sender):
         """Caffeinate (スリープ防止) の ON/OFF を切り替える"""
         if self.caffeinate_process is not None:
@@ -329,6 +339,8 @@ class AppDelegate(NSObject):
                 stderr=subprocess.DEVNULL
             )
             print("☕️ Caffeinateを有効化しました (スリープを防止)")
+        # メニューバーの表示文字も現在の状態に合わせて更新
+        self.caffeinate_item.setTitle_(self.caffeinate_title())
 
     def applicationWillTerminate_(self, notification):
         """アプリ終了時にバックグラウンドの caffeinate プロセスを終了"""
