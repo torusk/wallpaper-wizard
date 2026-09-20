@@ -241,7 +241,7 @@ class FloatingWindow(NSWindow):
 
 # ── アプリケーションデリゲート ─────────────────────
 class AppDelegate(NSObject):
-    __slots__ = ('window', 'animation_timer', 'base_x', 'base_y', 'start_time', 'overlay', 'status_item', 'toggle_item', 'caffeinate_process')
+    __slots__ = ('window', 'animation_timer', 'base_x', 'base_y', 'start_time', 'overlay', 'status_item', 'toggle_item', 'caffeinate_process', 'caffeinate_item')
 
     def applicationDidFinishLaunching_(self, notification):
         self.window = FloatingWindow.alloc().init()
