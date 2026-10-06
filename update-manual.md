@@ -9,6 +9,7 @@
 1. お好みのエディタ（VS Code, CotEditorなど）で `wizard_float.py` を開く。
 2. コードを編集して保存（⌘S）する。
 3. 現在動いている Wizard を終了させる（メニューバーの杖アイコン →「Wizardを終了」、または右クリック→閉じる）。
+   - 💡 **Caffeinate実行中はメニューバーのアイコンが杖からコーヒーカップに変わります。** 今どちらの状態かはアイコンを見れば一目で分かります。
 4. `/Applications/Wizard.app` をダブルクリックして再起動。
    → **これだけで変更が適用されます！**
 
@@ -28,8 +29,17 @@ uv run python wizard_float.py
 WIZARD_SIZE = 96          # 魔法使いのサイズ（大きくすると存在感UP）
 FLOAT_AMPLITUDE = 6.0     # 浮遊する上下の幅（大きくすると激しく動く）
 FLOAT_PERIOD = 2.5        # 浮遊の周期（小さくすると速くなる）
+
+STATUS_ICON_IDLE = "wand.and.stars"            # メニューバー: 通常時（杖）
+STATUS_ICON_CAFFEINATE = "cup.and.saucer.fill"  # メニューバー: Caffeinate実行中（コーヒーカップ）
 ```
 他にも、`WALLPAPER_DIR = os.path.expanduser("~/Pictures/wallpapers")` の部分を書き換えれば、壁紙フォルダの場所をデスクトップなどに変更できます。
+
+### ☕️ Caffeinate中の見た目のフィードバック
+「実行しているか分からない／止め忘れる」を防ぐため、**CaffeinateのON/OFFに連動してメニューバーアイコンが杖⇄コーヒーカップに切り替わります**。
+- 切り替え処理: `update_status_icon()`（SF Symbolsをテンプレート画像として設定＝白黒一色）
+- 文言（開始/終了）とツールチップも同時に更新
+- `animate_()` の中でcaffeinateプロセスの生存確認をしており、外部要因でプロセスが落ちた場合はアイコンを杖に戻して状態表示が実態とズレないようにしています
 
 ## 4. トラブルシューティング（言うことを聞かない時）
 アプリがフリーズしたり、クラッシュして裏で動き続けて「すでに起動しています」と出て起動できない時は、以下の「おまじない」をターミナルで実行してください。

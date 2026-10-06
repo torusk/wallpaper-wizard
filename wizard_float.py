@@ -28,6 +28,11 @@ import objc
 WIZARD_SIZE = 96          # 魔法使いの最大サイズ（ピクセル）
 FLOAT_AMPLITUDE = 6.0     # 浮遊する上下の幅（ピクセル）
 FLOAT_PERIOD = 2.5        # 浮遊の周期（秒）小さいほど速い
+
+# メニューバーのアイコン（SF Symbolsの名前。白黒一色で自動描画される）
+STATUS_ICON_IDLE = "wand.and.stars"            # 通常時（Caffeinate停止中）: 杖
+STATUS_ICON_CAFFEINATE = "cup.and.saucer.fill"  # Caffeinate実行中: コーヒーカップ
+# 例: "cup.and.saucer"（輪郭線）/ "mug.fill"（マグカップ）にも変えられます
 # ───────────────────────────────────────────
 
 # ── パス設定 ─────────────────────────────────
@@ -241,7 +246,7 @@ class FloatingWindow(NSWindow):
 
 # ── アプリケーションデリゲート ─────────────────────
 class AppDelegate(NSObject):
-    __slots__ = ('window', 'animation_timer', 'base_x', 'base_y', 'start_time', 'overlay', 'status_item', 'toggle_item', 'caffeinate_process', 'caffeinate_item')
+    __slots__ = ('window', 'animation_timer', 'base_x', 'base_y', 'start_time', 'overlay', 'status_item', 'toggle_item', 'caffeinate_process', 'caffeinate_item', 'tick')
 
     def applicationDidFinishLaunching_(self, notification):
         self.window = FloatingWindow.alloc().init()
@@ -260,17 +265,15 @@ class AppDelegate(NSObject):
         NSRunLoop.currentRunLoop().addTimer_forMode_(self.animation_timer, NSRunLoopCommonModes)
         self.overlay = None  # 光エフェクト保持用
         self.caffeinate_process = None  # スリープ防止プロセス保持用
+        self.tick = 0  # animate_ のフレームカウンタ（Caffeinateの生存確認用）
         self.setup_status_item()
 
     def setup_status_item(self):
         """メニューバーアイコンとメニューを配置する"""
         self.status_item = NSStatusBar.systemStatusBar().statusItemWithLength_(NSVariableStatusItemLength)
         # SF Symbolのテンプレート画像 → 白黒自動（他のメニューバー項目と統一される）
-        icon = NSImage.imageWithSystemSymbolName_accessibilityDescription_("wand.and.stars", None)
-        if icon is not None:
-            self.status_item.button().setImage_(icon)
-        else:
-            self.status_item.button().setTitle_("🧙")
+        # 通常時は杖、Caffeinate実行中はコーヒーカップ（update_status_icon 参照）
+        self.update_status_icon()
         menu = NSMenu.alloc().initWithTitle_("")
         for title, selector in [
             ("壁紙を今すぐ切り替える", "changeWallpaper:"),
@@ -318,6 +321,34 @@ class AppDelegate(NSObject):
         self.window.makeKeyAndOrderFront_(None)
         self.toggle_item.setTitle_("ウィザードを隠す")
 
+    def status_icon_name(self):
+        """現在の状態に応じたメニューバーアイコン（SF Symbols名）を返す"""
+        if getattr(self, 'caffeinate_process', None) is not None:
+            return STATUS_ICON_CAFFEINATE   # 実行中: コーヒーカップ
+        return STATUS_ICON_IDLE             # 停止中: 杖
+
+    def update_status_icon(self):
+        """メニューバーアイコンを現在の状態（杖／コーヒーカップ）に合わせて差し替える"""
+        button = self.status_item.button()
+        if button is None:
+            return
+        on = getattr(self, 'caffeinate_process', None) is not None
+        icon = NSImage.imageWithSystemSymbolName_accessibilityDescription_(
+            self.status_icon_name(), None
+        )
+        if icon is not None:
+            icon.setTemplate_(True)  # 白黒一色（他のメニューバー項目と統一）
+            button.setImage_(icon)
+            button.setTitle_("")
+        else:
+            # 万一SF Symbolが使えない環境では絵文字で代用
+            button.setImage_(None)
+            button.setTitle_("☕️" if on else "🧙")
+        # マウスを乗せたときにも状態が分かるようにしておく
+        button.setToolTip_(
+            "☕️ Caffeinate実行中（スリープ防止）" if on else "Wallpaper Wizard（Caffeinate停止中）"
+        )
+
     def caffeinate_title(self):
         """Caffeinateの状態に応じたメニュー表示文字を返す（右クリック／メニューバー共通）"""
         if getattr(self, 'caffeinate_process', None) is not None:
@@ -339,8 +370,9 @@ class AppDelegate(NSObject):
                 stderr=subprocess.DEVNULL
             )
             print("☕️ Caffeinateを有効化しました (スリープを防止)")
-        # メニューバーの表示文字も現在の状態に合わせて更新
+        # メニューバーの表示文字とアイコンも現在の状態に合わせて更新
         self.caffeinate_item.setTitle_(self.caffeinate_title())
+        self.update_status_icon()
 
     def applicationWillTerminate_(self, notification):
         """アプリ終了時にバックグラウンドの caffeinate プロセスを終了"""
@@ -348,6 +380,16 @@ class AppDelegate(NSObject):
             self.caffeinate_process.terminate()
 
     def animate_(self, timer):
+        # Caffeinateが外部要因で終了していないか定期的に確認（アイコンと実態のズレ防止）
+        self.tick = getattr(self, 'tick', 0) + 1
+        if (self.tick % 30 == 0
+                and getattr(self, 'caffeinate_process', None) is not None
+                and self.caffeinate_process.poll() is not None):
+            print("☕️ Caffeinateプロセスが終了しました (スリープ防止を停止)")
+            self.caffeinate_process = None
+            self.caffeinate_item.setTitle_(self.caffeinate_title())
+            self.update_status_icon()
+
         t = time.monotonic() - self.start_time
         dy = FLOAT_AMPLITUDE * math.sin(2 * math.pi * t / FLOAT_PERIOD)
         self.window.setFrameOrigin_((self.base_x, self.base_y + dy))
